@@ -39,6 +39,14 @@ iossync_libraries:
     repo: https://github.com/libimobiledevice/usbmuxd.git
     pkgconfig: ""
     binary_check: /usr/local/sbin/usbmuxd
+    # Tell autoconf where to drop the systemd unit + udev rule so they
+    # land in directories systemd/udev actually search. Without these
+    # flags, make install writes them under /usr/local/src/.../NONE/
+    # (placeholder) and the service is invisible to systemctl.
+    configure_args: "--with-systemdsystemunitdir=/lib/systemd/system --with-udevrulesdir=/lib/udev/rules.d"
+    # Trip the idempotence guard if the systemd unit is missing even
+    # though the usbmuxd binary exists (recovers half-broken installs).
+    extra_check: /lib/systemd/system/usbmuxd.service
   - name: ifuse
     repo: https://github.com/libimobiledevice/ifuse.git
     pkgconfig: ""

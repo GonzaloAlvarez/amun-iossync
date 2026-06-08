@@ -1,17 +1,19 @@
 ---
-- name: Verify usbmux system user exists (created by usbmuxd make install)
-  ansible.builtin.getent:
-    database: passwd
-    key: usbmux
-    fail_key: false
-  register: usbmux_user
-
-- name: Fail if usbmux user is missing after build
-  ansible.builtin.fail:
-    msg: "usbmux system user was not created by 'usbmuxd make install' — investigate upstream changes"
-  when:
-    - not iossync_skip_build | bool
-    - getent_passwd['usbmux'] is not defined
+# Upstream usbmuxd `make install` no longer creates the `usbmux` user or
+# the udev rule/systemd unit (the latter two are gated on configure flags;
+# see iossync_libraries.usbmuxd.configure_args in defaults/main.yml).
+# Create the user here explicitly — matches Debian's stock usbmuxd packaging.
+- name: Ensure usbmux system user exists
+  ansible.builtin.user:
+    name: usbmux
+    system: true
+    shell: /usr/sbin/nologin
+    home: /var/lib/usbmux
+    create_home: false
+    groups: plugdev
+    append: false
+  become: true
+  when: not iossync_skip_build | bool
 
 - name: Ensure fuse group exists (Debian 13 dropped auto-creation by fuse3)
   ansible.builtin.group:
@@ -33,6 +35,16 @@
     groups: plugdev
     append: true
   become: true
+
+- name: Reload udev rules so 39-usbmuxd.rules is picked up
+  ansible.builtin.command:
+    cmd: "{{ item }}"
+  loop:
+    - udevadm control --reload-rules
+    - udevadm trigger
+  become: true
+  changed_when: false
+  when: not iossync_skip_build | bool
 
 - name: Enable and start usbmuxd
   ansible.builtin.systemd:

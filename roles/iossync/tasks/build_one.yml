@@ -8,6 +8,12 @@
     path: "{{ lib.binary_check }}"
   register: lib_binary_stat
 
+- name: "[{{ lib.name }}] Stat secondary install artifact"
+  ansible.builtin.stat:
+    path: "{{ lib.extra_check }}"
+  register: lib_extra_stat
+  when: lib.extra_check is defined
+
 - name: "[{{ lib.name }}] Check pkg-config registration"
   ansible.builtin.command: "pkg-config --modversion {{ lib.pkgconfig }}"
   register: lib_pkgconfig_check
@@ -24,6 +30,7 @@
         iossync_force_rebuild | bool
         or not lib_binary_stat.stat.exists
         or (lib.pkgconfig | length > 0 and lib_pkgconfig_check.rc != 0)
+        or (lib.extra_check is defined and not lib_extra_stat.stat.exists)
       }}
 
 - name: "[{{ lib.name }}] Build + install from source"
@@ -37,9 +44,9 @@
         version: master
         force: true
 
-    - name: "[{{ lib.name }}] Run autogen.sh"
+    - name: "[{{ lib.name }}] Run autogen.sh (forwards args to ./configure)"
       ansible.builtin.command:
-        cmd: ./autogen.sh
+        cmd: "./autogen.sh {{ lib.configure_args | default('') }}"
         chdir: "{{ iossync_build_dir }}/{{ lib.name }}"
       environment:
         PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
