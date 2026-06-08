@@ -1,0 +1,22 @@
+---
+- name: Install build dependencies
+  ansible.builtin.apt:
+    name: "{{ iossync_build_deps }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+  retries: 5
+  delay: 5
+  register: apt_build_deps
+  until: apt_build_deps is success
+
+- name: Install runtime dependencies
+  ansible.builtin.apt:
+    name: "{{ iossync_runtime_deps }}"
+    state: present
+  become: true
+  retries: 5
+  delay: 5
+  register: apt_runtime_deps
+  until: apt_runtime_deps is success

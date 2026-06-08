@@ -1,0 +1,8 @@
+---
+- name: Converge
+  hosts: all
+  vars:
+    iossync_skip_build: true
+    iossync_manage_fstab: false
+  roles:
+    - role: iossync

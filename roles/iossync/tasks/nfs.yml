@@ -1,0 +1,18 @@
+---
+- name: Ensure NFS mountpoint exists
+  ansible.builtin.file:
+    path: "{{ iossync_nfs_mountpoint }}"
+    state: directory
+    owner: "{{ iossync_user }}"
+    group: "{{ iossync_user }}"
+    mode: "0755"
+  become: true
+
+- name: Manage fstab entry for raidnas NFS share (noauto — scripts mount on demand)
+  ansible.posix.mount:
+    src: "{{ iossync_nfs_server }}:{{ iossync_nfs_export }}"
+    path: "{{ iossync_nfs_mountpoint }}"
+    fstype: nfs
+    opts: "{{ iossync_nfs_opts }}"
+    state: present
+  become: true

@@ -1,0 +1,33 @@
+---
+- name: Look up target user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ iossync_user }}"
+    fail_key: true
+
+- name: Capture target user home
+  ansible.builtin.set_fact:
+    iossync_user_home: "{{ getent_passwd[iossync_user][4] }}"
+
+- name: Install prerequisites
+  ansible.builtin.import_tasks: prereqs.yml
+
+- name: Build libimobiledevice stack
+  ansible.builtin.import_tasks: build.yml
+  when: not iossync_skip_build | bool
+
+- name: Configure usbmuxd
+  ansible.builtin.import_tasks: usbmuxd.yml
+
+- name: Manage NFS fstab entry
+  ansible.builtin.import_tasks: nfs.yml
+  when: iossync_manage_fstab | bool
+
+- name: Render /etc/iossync config
+  ansible.builtin.import_tasks: config.yml
+
+- name: Install backup scripts
+  ansible.builtin.import_tasks: scripts.yml
+
+- name: Flush handlers (ldconfig, daemon-reload)
+  ansible.builtin.meta: flush_handlers

@@ -1,0 +1,7 @@
+# Managed by amun-iossync — UDID → Owner/Model under {{ iossync_nfs_iphone_subdir }}/.
+# Format: <UDID>=<Owner>/<Model>. One device per line. Greppable by bash scripts.
+# Add a new device by plugging it in, running ios-backup, copying the printed
+# UDID + suggested label, and appending a line here.
+{% for d in iossync_known_devices %}
+{{ d.udid }}={{ d.owner }}/{{ d.model }}
+{% endfor %}

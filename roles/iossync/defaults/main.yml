@@ -1,0 +1,68 @@
+---
+iossync_user: "gonzalo"
+iossync_build_dir: "/usr/local/src"
+iossync_force_rebuild: false
+iossync_skip_build: false
+iossync_manage_fstab: true
+
+iossync_nfs_server: "raidnas.lan"
+iossync_nfs_export: "/volume1/data"
+iossync_nfs_mountpoint: "/home/{{ iossync_user }}/nfs"
+iossync_nfs_iphone_subdir: "iPhone"
+iossync_nfs_opts: "nfsvers=3,user,noauto,relatime,rw,hard,intr,rsize=8192,wsize=8192"
+
+# Build order is load-bearing — DO NOT reorder.
+# binary_check: the file whose existence proves the lib is installed.
+# pkgconfig: the .pc name to query with `pkg-config --modversion`. Empty for daemons.
+iossync_libraries:
+  - name: libplist
+    repo: https://github.com/libimobiledevice/libplist.git
+    pkgconfig: libplist-2.0
+    binary_check: /usr/local/lib/libplist-2.0.so
+  - name: libimobiledevice-glue
+    repo: https://github.com/libimobiledevice/libimobiledevice-glue.git
+    pkgconfig: libimobiledevice-glue-1.0
+    binary_check: /usr/local/lib/libimobiledevice-glue-1.0.so
+  - name: libusbmuxd
+    repo: https://github.com/libimobiledevice/libusbmuxd.git
+    pkgconfig: libusbmuxd-2.0
+    binary_check: /usr/local/lib/libusbmuxd-2.0.so
+  - name: libimobiledevice
+    repo: https://github.com/libimobiledevice/libimobiledevice.git
+    pkgconfig: libimobiledevice-1.0
+    binary_check: /usr/local/bin/idevicebackup2
+  - name: usbmuxd
+    repo: https://github.com/libimobiledevice/usbmuxd.git
+    pkgconfig: ""
+    binary_check: /usr/local/sbin/usbmuxd
+  - name: ifuse
+    repo: https://github.com/libimobiledevice/ifuse.git
+    pkgconfig: ""
+    binary_check: /usr/local/bin/ifuse
+
+iossync_build_deps:
+  - build-essential
+  - autoconf
+  - automake
+  - libtool
+  - libtool-bin
+  - pkg-config
+  - git
+  - libssl-dev
+  - libusb-1.0-0-dev
+  - libfuse-dev
+  - python3-dev
+  - libxml2-dev
+
+iossync_runtime_deps:
+  - nfs-common
+  - rsync
+  - fuse3
+
+iossync_known_devices:
+  - udid: "00008101-000A51942109001E"
+    owner: "Gonzalo"
+    model: "iPhone12"
+  - udid: "00008110-0004184A0C90401E"
+    owner: "Alicia"
+    model: "XR"

@@ -1,0 +1,38 @@
+#!/bin/bash
+# ios-sync — convenience wrapper: full backup + photo rsync in one go.
+#
+# Flags:
+#   --backup-only       skip the photo rsync
+#   --photos-only       skip the device backup
+#   --snapshot-photos   pass --snapshot to ios-sync-photos
+#   -h|--help           this help
+
+set -euo pipefail
+
+DO_BACKUP=1
+DO_PHOTOS=1
+PHOTO_FLAGS=()
+
+for arg in "$@"; do
+    case "$arg" in
+        --backup-only)     DO_PHOTOS=0 ;;
+        --photos-only)     DO_BACKUP=0 ;;
+        --snapshot-photos) PHOTO_FLAGS+=(--snapshot) ;;
+        -h|--help)
+            sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//' >&2
+            exit 0
+            ;;
+        *)
+            printf 'ios-sync: unknown flag: %s\n' "$arg" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [[ "$DO_BACKUP" -eq 1 ]]; then
+    /usr/local/bin/ios-backup
+fi
+
+if [[ "$DO_PHOTOS" -eq 1 ]]; then
+    /usr/local/bin/ios-sync-photos "${PHOTO_FLAGS[@]}"
+fi

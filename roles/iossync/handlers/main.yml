@@ -1,0 +1,16 @@
+---
+- name: Run ldconfig
+  ansible.builtin.command: ldconfig
+  become: true
+  changed_when: false
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
+- name: Restart usbmuxd
+  ansible.builtin.systemd:
+    name: usbmuxd
+    state: restarted
+  become: true

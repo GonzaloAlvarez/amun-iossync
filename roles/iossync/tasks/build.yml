@@ -1,0 +1,16 @@
+---
+- name: Ensure build dir exists
+  ansible.builtin.file:
+    path: "{{ iossync_build_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: Build libimobiledevice stack (in order)
+  ansible.builtin.include_tasks: build_one.yml
+  loop: "{{ iossync_libraries }}"
+  loop_control:
+    loop_var: lib
+    label: "{{ lib.name }}"

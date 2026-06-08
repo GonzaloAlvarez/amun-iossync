@@ -1,0 +1,13 @@
+---
+galaxy_info:
+  role_name: iossync
+  namespace: gonzaloalvarez
+  author: Gonzalo Alvarez
+  description: Compile libimobiledevice stack from source and install one-command iPhone backup scripts on a Debian host
+  license: GPL-3.0
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+dependencies: []

@@ -1,0 +1,45 @@
+#!/bin/bash
+# ios-backup — encrypted full backup of the connected iOS device into NFS.
+#
+# Replaces the manual checklist in ~/device_backup_instructions.md (mount nfs,
+# idevicebackup2 cloud off, idevicebackup2 -i encryption on, idevicebackup2
+# backup ./, mv to FullBackups/). Writes directly into the right per-device
+# subdirectory under <nfs>/<iphone_subdir>/<Owner>/<Model>/FullBackups/.
+#
+# Exit codes:
+#   0  success
+#   1  generic
+#   2  NFS mount failed
+#   3  no device connected
+#   4  device not paired/trusted
+#   5  unknown UDID — add to /etc/iossync/devices.conf
+#   6  idevicebackup2 failed
+
+set -euo pipefail
+# shellcheck source=/usr/local/lib/iossync-common.sh
+source /usr/local/lib/iossync-common.sh
+
+trap '_nfs_maybe_unmount' EXIT
+
+_nfs_ensure_mounted
+udid="$(_require_device)"
+subdir="$(_require_known_device "$udid")"
+
+target="$IOSSYNC_NFS_MOUNTPOINT/$IOSSYNC_NFS_IPHONE_SUBDIR/$subdir/FullBackups"
+mkdir -p "$target"
+
+_log "Disabling cloud backup"
+idevicebackup2 -u "$udid" cloud off >/dev/null 2>&1 \
+    || _warn "cloud off failed (already off?)"
+
+_log "Enabling backup encryption"
+idevicebackup2 -u "$udid" encryption on >/dev/null 2>&1 \
+    || _log "encryption already on (or prompt skipped)"
+
+_log "Backing up $udid → $target"
+cd "$target"
+idevicebackup2 -u "$udid" backup ./ \
+    || _die "idevicebackup2 backup failed" 6
+
+size="$(du -sh "$target/$udid" 2>/dev/null | cut -f1)"
+_log "Done. Backup at $target/$udid (size: ${size:-?})"

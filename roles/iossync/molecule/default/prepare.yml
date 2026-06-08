@@ -1,0 +1,22 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  tasks:
+    - name: Ensure fuse group exists (created on real hosts by fuse3 install)
+      ansible.builtin.group:
+        name: fuse
+        state: present
+
+    - name: Ensure plugdev group exists
+      ansible.builtin.group:
+        name: plugdev
+        state: present
+
+    - name: Ensure gonzalo user exists
+      ansible.builtin.user:
+        name: gonzalo
+        uid: 1000
+        shell: /bin/bash
+        create_home: true
+        home: /home/gonzalo

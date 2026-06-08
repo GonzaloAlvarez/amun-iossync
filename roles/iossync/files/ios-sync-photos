@@ -1,0 +1,71 @@
+#!/bin/bash
+# ios-sync-photos — rsync DCIM from connected iOS device into NFS via ifuse.
+#
+# Optional --snapshot flag also creates a dated DCIM-DDMMYYYY/ sibling
+# directory (date format matches the historical pattern on raidnas).
+#
+# Exit codes:
+#   0  success
+#   1  generic / bad flag
+#   2  NFS mount failed
+#   3  no device connected
+#   4  device not paired/trusted
+#   5  unknown UDID — add to /etc/iossync/devices.conf
+#   7  ifuse mount failed
+#   8  rsync failed
+
+set -euo pipefail
+# shellcheck source=/usr/local/lib/iossync-common.sh
+source /usr/local/lib/iossync-common.sh
+
+SNAPSHOT=0
+case "${1:-}" in
+    "") ;;
+    --snapshot) SNAPSHOT=1 ;;
+    -h|--help)
+        cat >&2 <<'EOF'
+Usage: ios-sync-photos [--snapshot]
+  --snapshot   also create a dated DCIM-DDMMYYYY/ snapshot
+EOF
+        exit 0
+        ;;
+    *) _die "unknown flag: $1" 1 ;;
+esac
+
+MOUNT_DIR="$(mktemp -d -t iossync-ifuse-XXXXXX)"
+_cleanup() {
+    if mountpoint -q "$MOUNT_DIR"; then
+        fusermount -u "$MOUNT_DIR" 2>/dev/null \
+            || umount "$MOUNT_DIR" 2>/dev/null \
+            || _warn "fusermount -u $MOUNT_DIR failed"
+    fi
+    rmdir "$MOUNT_DIR" 2>/dev/null || true
+    _nfs_maybe_unmount
+}
+trap _cleanup EXIT
+
+_nfs_ensure_mounted
+udid="$(_require_device)"
+subdir="$(_require_known_device "$udid")"
+target="$IOSSYNC_NFS_MOUNTPOINT/$IOSSYNC_NFS_IPHONE_SUBDIR/$subdir"
+mkdir -p "$target/DCIM"
+
+_log "Mounting iPhone via ifuse at $MOUNT_DIR"
+ifuse -u "$udid" "$MOUNT_DIR" || _die "ifuse mount failed (fuse group? device trusted?)" 7
+
+_log "rsync DCIM/ → $target/DCIM/"
+rsync -rpq --update --ignore-existing --progress \
+    "$MOUNT_DIR/DCIM/" "$target/DCIM/" \
+    || _die "rsync failed" 8
+
+if [[ "$SNAPSHOT" -eq 1 ]]; then
+    snap="$target/DCIM-$(date +%d%m%Y)"
+    if [[ -e "$snap" ]]; then
+        _warn "Snapshot $snap already exists — skipping"
+    else
+        _log "Copying snapshot → $snap"
+        cp -a "$target/DCIM" "$snap"
+    fi
+fi
+
+_log "Done"

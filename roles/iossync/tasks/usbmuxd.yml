@@ -1,0 +1,37 @@
+---
+- name: Verify usbmux system user exists (created by usbmuxd make install)
+  ansible.builtin.getent:
+    database: passwd
+    key: usbmux
+    fail_key: false
+  register: usbmux_user
+
+- name: Fail if usbmux user is missing after build
+  ansible.builtin.fail:
+    msg: "usbmux system user was not created by 'usbmuxd make install' — investigate upstream changes"
+  when:
+    - not iossync_skip_build | bool
+    - getent_passwd['usbmux'] is not defined
+
+- name: Ensure target user is in fuse group
+  ansible.builtin.user:
+    name: "{{ iossync_user }}"
+    groups: fuse
+    append: true
+  become: true
+
+- name: Ensure target user is in plugdev group
+  ansible.builtin.user:
+    name: "{{ iossync_user }}"
+    groups: plugdev
+    append: true
+  become: true
+
+- name: Enable and start usbmuxd
+  ansible.builtin.systemd:
+    name: usbmuxd
+    enabled: true
+    state: started
+    daemon_reload: true
+  become: true
+  when: not iossync_skip_build | bool

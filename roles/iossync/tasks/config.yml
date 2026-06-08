@@ -1,0 +1,27 @@
+---
+- name: Ensure /etc/iossync exists
+  ansible.builtin.file:
+    path: /etc/iossync
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: Render /etc/iossync/devices.conf (UDID → Owner/Model mapping)
+  ansible.builtin.template:
+    src: devices.conf.j2
+    dest: /etc/iossync/devices.conf
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+
+- name: Render /etc/iossync/iossync.env (shell-sourceable env for scripts)
+  ansible.builtin.template:
+    src: iossync.env.j2
+    dest: /etc/iossync/iossync.env
+    owner: root
+    group: root
+    mode: "0644"
+  become: true

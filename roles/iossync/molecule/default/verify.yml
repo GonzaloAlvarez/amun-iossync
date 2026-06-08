@@ -1,0 +1,142 @@
+---
+- name: Verify
+  hosts: all
+  tasks:
+    - name: Check runtime deps installed (nfs-common, rsync, fuse3)
+      ansible.builtin.command: "dpkg-query -W -f='${Status}' {{ item }}"
+      register: pkg_status
+      changed_when: false
+      loop:
+        - nfs-common
+        - rsync
+        - fuse3
+
+    - name: Assert runtime deps installed
+      ansible.builtin.assert:
+        that:
+          - "'install ok installed' in item.stdout"
+      loop: "{{ pkg_status.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Check key build deps installed (build-essential, autoconf, libtool, pkg-config, libfuse-dev)
+      ansible.builtin.command: "dpkg-query -W -f='${Status}' {{ item }}"
+      register: build_pkg_status
+      changed_when: false
+      loop:
+        - build-essential
+        - autoconf
+        - libtool
+        - pkg-config
+        - libfuse-dev
+        - libusb-1.0-0-dev
+
+    - name: Assert build deps installed
+      ansible.builtin.assert:
+        that:
+          - "'install ok installed' in item.stdout"
+      loop: "{{ build_pkg_status.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Stat /etc/iossync/devices.conf
+      ansible.builtin.stat:
+        path: /etc/iossync/devices.conf
+      register: devices_conf
+
+    - name: Assert devices.conf present, mode 0644, root-owned
+      ansible.builtin.assert:
+        that:
+          - devices_conf.stat.exists
+          - devices_conf.stat.mode == '0644'
+          - devices_conf.stat.pw_name == 'root'
+
+    - name: Grep devices.conf for Gonzalo iPhone12 entry
+      ansible.builtin.command:
+        cmd: grep -F "00008101-000A51942109001E=Gonzalo/iPhone12" /etc/iossync/devices.conf
+      changed_when: false
+
+    - name: Grep devices.conf for Alicia XR entry
+      ansible.builtin.command:
+        cmd: grep -F "00008110-0004184A0C90401E=Alicia/XR" /etc/iossync/devices.conf
+      changed_when: false
+
+    - name: Stat /etc/iossync/iossync.env
+      ansible.builtin.stat:
+        path: /etc/iossync/iossync.env
+      register: iossync_env
+
+    - name: Assert iossync.env present, mode 0644
+      ansible.builtin.assert:
+        that:
+          - iossync_env.stat.exists
+          - iossync_env.stat.mode == '0644'
+
+    - name: Grep iossync.env for NFS mountpoint
+      ansible.builtin.command:
+        cmd: grep -F "IOSSYNC_NFS_MOUNTPOINT=" /etc/iossync/iossync.env
+      changed_when: false
+
+    - name: Grep iossync.env for iPhone subdir
+      ansible.builtin.command:
+        cmd: grep -F "IOSSYNC_NFS_IPHONE_SUBDIR=" /etc/iossync/iossync.env
+      changed_when: false
+
+    - name: Stat iossync scripts in /usr/local/bin
+      ansible.builtin.stat:
+        path: "/usr/local/bin/{{ item }}"
+      loop:
+        - ios-backup
+        - ios-sync-photos
+        - ios-sync
+      register: bin_scripts
+
+    - name: Assert each script present, mode 0755, root-owned
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.mode == '0755'
+          - item.stat.pw_name == 'root'
+      loop: "{{ bin_scripts.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Stat /usr/local/lib/iossync-common.sh
+      ansible.builtin.stat:
+        path: /usr/local/lib/iossync-common.sh
+      register: lib_common
+
+    - name: Assert iossync-common.sh present, mode 0644
+      ansible.builtin.assert:
+        that:
+          - lib_common.stat.exists
+          - lib_common.stat.mode == '0644'
+
+    - name: bash -n on every shipped script (syntax check)
+      ansible.builtin.command:
+        cmd: "bash -n {{ item }}"
+      changed_when: false
+      loop:
+        - /usr/local/bin/ios-backup
+        - /usr/local/bin/ios-sync-photos
+        - /usr/local/bin/ios-sync
+        - /usr/local/lib/iossync-common.sh
+
+    - name: Read gonzalo group memberships
+      ansible.builtin.command:
+        cmd: id -nG gonzalo
+      register: gonzalo_groups
+      changed_when: false
+
+    - name: Assert gonzalo is in fuse and plugdev
+      ansible.builtin.assert:
+        that:
+          - "'fuse' in gonzalo_groups.stdout.split()"
+          - "'plugdev' in gonzalo_groups.stdout.split()"
+
+    - name: Confirm fstab was NOT touched (molecule sets manage_fstab=false)
+      ansible.builtin.command:
+        cmd: grep -F "raidnas.lan" /etc/fstab
+      register: fstab_check
+      changed_when: false
+      failed_when: fstab_check.rc == 0
