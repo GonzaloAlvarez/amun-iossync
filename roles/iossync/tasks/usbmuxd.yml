@@ -13,6 +13,13 @@
     - not iossync_skip_build | bool
     - getent_passwd['usbmux'] is not defined
 
+- name: Ensure fuse group exists (Debian 13 dropped auto-creation by fuse3)
+  ansible.builtin.group:
+    name: fuse
+    state: present
+    system: true
+  become: true
+
 - name: Ensure target user is in fuse group
   ansible.builtin.user:
     name: "{{ iossync_user }}"
