@@ -27,6 +27,10 @@ iossync_libraries:
     repo: https://github.com/libimobiledevice/libusbmuxd.git
     pkgconfig: libusbmuxd-2.0
     binary_check: /usr/local/lib/libusbmuxd-2.0.so
+  - name: libtatsu
+    repo: https://github.com/libimobiledevice/libtatsu.git
+    pkgconfig: libtatsu-1.0
+    binary_check: /usr/local/lib/libtatsu-1.0.so
   - name: libimobiledevice
     repo: https://github.com/libimobiledevice/libimobiledevice.git
     pkgconfig: libimobiledevice-1.0
